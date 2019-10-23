@@ -7,7 +7,7 @@ import numpy as np
 import cv2
 
 # import some common detectron2 utilities
-from detectron2.engine import DefaultPredictor
+#from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog
@@ -71,6 +71,6 @@ import random
 dataset_dicts = get_ts_dicts("/home/kevin/ascent/dataset/Tsinghua_traffic_sign/all_images/")
 for d in random.sample(dataset_dicts, 3):
     img = cv2.imread(d["file_name"])
-    visualizer = Visualizer(img[:, :, ::-1], metadata=ts_metadata, scale=0.5)
-    vis = visualizer.draw_dataset_dict(d)
-    cv2_imshow(vis.get_image()[:, :, ::-1])
+    #visualizer = Visualizer(img[:, :, ::-1], metadata=ts_metadata, scale=0.5)
+    #vis = visualizer.draw_dataset_dict(d)
+    #cv2_imshow(vis.get_image()[:, :, ::-1])
