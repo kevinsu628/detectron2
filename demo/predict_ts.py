@@ -72,12 +72,12 @@ if __name__ == "__main__":
     cfg = setup_cfg(args)
 
     demo = VisualizationDemo(cfg)
-    # person bike car motor bus truck traffic light, stop sign
-    interested_cls = [0,1,2,3,5,7,9,11]
-
-    for each_img in glob.glob(os.path.join(args.dataset_folder, "*.jpg")):
+    
+    while True:
+    #for each_img in glob.glob(os.path.join(args.dataset_folder, "*.jpg")):
         # use PIL, to be consistent with evaluation
-        print(each_img)
+        each_img = "/home/cambricon/Cambricon-MLU100/datasets_old/Tsinghua_traffic_sign/test_imgs/41372.jpg"
+        each_img = "/home/cambricon/Cambricon-MLU100/datasets_old/COCO/interested_val/000000011197.jpg"
         img = read_image(each_img, format="BGR")
         start_time = time.time()
         predictions, visualized_output = demo.run_on_image(img)
@@ -90,6 +90,7 @@ if __name__ == "__main__":
         pred_classes = predictions["instances"].pred_classes.cpu().numpy()
         pred_boxes = predictions["instances"].pred_boxes.tensor.cpu().numpy()
         records = []
+        print(pred_boxes)
         for each_cls, each_box in zip(pred_classes, pred_boxes):
             if int(each_cls) in interested_cls:
                 cls_id = interested_cls.index(int(each_cls)) 
@@ -101,9 +102,10 @@ if __name__ == "__main__":
                 w /= img_w
                 h /= img_h
                 records.append(" ".join([str(x) for x in [cls_id, x_center, y_center, w, h]]))
-        each_txt = each_img.replace(".jpg", ".txt")
-        txt_writer = open(each_txt, "a+")
-        txt_writer.write("\n".join(records) + "\n") 
-                
+        break
+        #each_txt = each_img.replace(".jpg", ".txt")
+        #txt_writer = open(each_txt, "a+")
+        #txt_writer.write("\n".join(records) + "\n") 
+             
                 
 
