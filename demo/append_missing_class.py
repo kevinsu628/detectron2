@@ -178,16 +178,21 @@ if predict_whole_folder:
         records = parsePrediction(outputs, orig_rows) # additional predictions 
         jpg_path = os.path.join(args.output, os.path.basename(d))
         cv2.imwrite(jpg_path, im)
-        txt_writer = open(jpg_path.replace("."+args.ext, ".txt"), "w+")
+        txt_writer = open(jpg_path.replace("."+args.ext, ".txt"), "a+")
         txt_writer.write("\n".join(records))
         txt_writer.close()
 else:
     im = cv2.imread(args.dataset)
     outputs = predictor(im)
-    print(outputs)
-    records = parsePrediction(outputs)
-    jpg_path = os.path.join(args.output, os.path.basename(args.dataset))
+
+    each_txt = d.replace("*"+args.ext, ".txt")
+    txt_reader = open(each_txt, "r")
+    orig_rows = [r.strip("\n") for r in txt_reader]
+
+    records = parsePrediction(outputs, orig_rows) # additional predictions 
+    print(records)
+    jpg_path = os.path.join(args.output, os.path.basename(d))
     cv2.imwrite(jpg_path, im)
-    txt_writer = open(jpg_path.replace("." + args.ext, ".txt"), "w+")
+    txt_writer = open(jpg_path.replace("."+args.ext, ".txt"), "a+")
     txt_writer.write("\n".join(records))
     txt_writer.close()
