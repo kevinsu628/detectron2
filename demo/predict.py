@@ -17,6 +17,7 @@ from detectron2.engine import DefaultTrainer
 from detectron2.config import get_cfg
 from detectron2.utils.visualizer import ColorMode
 
+import time
 import random
 import os
 import glob
@@ -85,7 +86,7 @@ def parsePrediction(outputs):
     pred_boxes = outputs["instances"].pred_boxes.tensor.cpu().numpy()
     records = []
     for each_cls, each_box in zip(pred_classes, pred_boxes):
-        cls_id = 0
+        cls_id = each_cls
         [x1, y1, x2, y2] = each_box
         w, h = x2 - x1, y2 - y1
         (img_h, img_w) = outputs["instances"].image_size
@@ -98,7 +99,7 @@ def parsePrediction(outputs):
 
 
 args = get_parser().parse_args()
-
+logger = setup_logger()
 predict_whole_folder = os.path.isdir(args.dataset)
 
 cfg = get_cfg()
@@ -119,8 +120,13 @@ predictor = DefaultPredictor(cfg)
 if predict_whole_folder:
     for d in glob.glob(os.path.join(args.dataset, "*"+args.ext)):
         im = cv2.imread(d)
+        start_time = time.time()
         outputs = predictor(im)
-        print(outputs)
+        logger.info(
+            "{}: detected {} instances in {:.2f}s".format(
+                d, len(outputs["instances"]), time.time() - start_time
+            )
+        )
         records = parsePrediction(outputs)
         jpg_path = os.path.join(args.output, os.path.basename(d))
         cv2.imwrite(jpg_path, im)
