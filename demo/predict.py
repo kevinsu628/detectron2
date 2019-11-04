@@ -110,7 +110,7 @@ cfg.SOLVER.IMS_PER_BATCH = 2
 cfg.SOLVER.BASE_LR = 0.00025
 cfg.SOLVER.MAX_ITER = 30000
 cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 64   # faster, and good enough for this toy dataset
-cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2
+cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1
 cfg.OUTPUT_DIR = args.output
 os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7   # set the testing threshold for this model
@@ -120,13 +120,13 @@ predictor = DefaultPredictor(cfg)
 if predict_whole_folder:
     for d in glob.glob(os.path.join(args.dataset, "*"+args.ext)):
         im = cv2.imread(d)
-        start_time = time.time()
+        #start_time = time.time()
         outputs = predictor(im)
-        logger.info(
-            "{}: detected {} instances in {:.2f}s".format(
-                d, len(outputs["instances"]), time.time() - start_time
-            )
-        )
+        #logger.info(
+        #    "{}: detected {} instances in {:.2f}s".format(
+        #        d, len(outputs["instances"]), time.time() - start_time
+        #    )
+        #)
         records = parsePrediction(outputs)
         jpg_path = os.path.join(args.output, os.path.basename(d))
         cv2.imwrite(jpg_path, im)

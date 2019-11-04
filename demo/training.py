@@ -84,7 +84,7 @@ def get_dicts(img_dir, args):
 args = get_parser().parse_args()
 
 for d in ["train", "val"]:
-    DatasetCatalog.register(os.path.join(args.dataset_name, d), lambda d=d: get_dicts(args.dataset_folder + d, args))
+    DatasetCatalog.register(os.path.join(args.dataset_name, d), lambda d=d: get_dicts(os.path.join(args.dataset_folder, d), args))
     MetadataCatalog.get(os.path.join(args.dataset_name, d)).set(thing_classes=[args.dataset_name])
 
 cfg = get_cfg()
@@ -94,12 +94,12 @@ cfg.DATASETS.TEST = (os.path.join(args.dataset_name, "val"),)
 cfg.DATALOADER.NUM_WORKERS = 2
 cfg.MODEL.WEIGHTS = args.weight
 cfg.SOLVER.IMS_PER_BATCH = 2
-cfg.SOLVER.BASE_LR = 0.00025
-cfg.SOLVER.MAX_ITER = 30000
+cfg.SOLVER.BASE_LR = 0.0001
+cfg.SOLVER.MAX_ITER = 40000
 cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 64   # faster, and good enough for this toy dataset
-cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2
+cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1
 cfg.OUTPUT_DIR = args.output
 os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 trainer = DefaultTrainer(cfg)
-trainer.resume_or_load(resume=False)
+trainer.resume_or_load(resume=True)
 trainer.train()

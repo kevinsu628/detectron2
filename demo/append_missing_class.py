@@ -120,10 +120,10 @@ def parsePrediction(outputs, orig_rows):
     pred_boxes = outputs["instances"].pred_boxes.tensor.cpu().numpy()
     records = []
     for each_cls, each_box in zip(pred_classes, pred_boxes):
-        cls_id = each_cls
+        cls_id = 8#each_cls
 
-        if str(cls_id) != "1":
-            continue
+        #if str(cls_id) != "0":
+        #    continue
 
         [x1, y1, x2, y2] = each_box # prediction 
         w, h = x2 - x1, y2 - y1
@@ -131,12 +131,12 @@ def parsePrediction(outputs, orig_rows):
 
         # check if the predicted bbox overlap with any existing bbox by checking IOU > 0.7
         no_overlap = True
-        for row in orig_rows:
-            row = row.split(" ")
-            x1_, y1_, x2_, y2_ = bboxRelToAbs(row, img_w, img_h)
-            if iou((x1,y1,x2,y2), x1_,y1_,x2_,y2_) > 0.5:
-                no_overlap = False
-                break
+        #for row in orig_rows:
+        #    row = row.split(" ")
+        #    x1_, y1_, x2_, y2_ = bboxRelToAbs(row, img_w, img_h)
+        #    if iou((x1,y1,x2,y2), (x1_,y1_,x2_,y2_)) > 0.5:
+        #        no_overlap = False
+        #        break
         if no_overlap:
             x_center = (x1 + w / 2) / img_w
             y_center = (y1 + h / 2) / img_h
@@ -158,41 +158,41 @@ cfg.SOLVER.IMS_PER_BATCH = 2
 cfg.SOLVER.BASE_LR = 0.00025
 cfg.SOLVER.MAX_ITER = 30000
 cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 64   # faster, and good enough for this toy dataset
-cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2
+cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1
 cfg.OUTPUT_DIR = args.output
 os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7   # set the testing threshold for this model
+cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.95   # set the testing threshold for this model
 predictor = DefaultPredictor(cfg)
 
 
 if predict_whole_folder:
     for d in glob.glob(os.path.join(args.dataset, "*"+args.ext)):
         im = cv2.imread(d)
-        start_time = time.time()
         outputs = predictor(im)
 
-        each_txt = d.replace("*"+args.ext, ".txt")
+        each_txt = d.replace("."+args.ext, ".txt")
         txt_reader = open(each_txt, "r")
         orig_rows = [r.strip("\n") for r in txt_reader]
 
         records = parsePrediction(outputs, orig_rows) # additional predictions 
+        print("Added {} new bboxes".format(str(len(records))))
         jpg_path = os.path.join(args.output, os.path.basename(d))
         cv2.imwrite(jpg_path, im)
         txt_writer = open(jpg_path.replace("."+args.ext, ".txt"), "a+")
-        txt_writer.write("\n".join(records))
+        txt_writer.write("\n".join(orig_rows + records))
         txt_writer.close()
-else:
+else: # if we just wanna verify an image 
     im = cv2.imread(args.dataset)
     outputs = predictor(im)
 
-    each_txt = d.replace("*"+args.ext, ".txt")
+    each_txt = args.dataset.replace("."+args.ext, ".txt")
     txt_reader = open(each_txt, "r")
     orig_rows = [r.strip("\n") for r in txt_reader]
 
     records = parsePrediction(outputs, orig_rows) # additional predictions 
     print(records)
-    jpg_path = os.path.join(args.output, os.path.basename(d))
+    jpg_path = os.path.join(args.output, os.path.basename(args.dataset))
     cv2.imwrite(jpg_path, im)
     txt_writer = open(jpg_path.replace("."+args.ext, ".txt"), "a+")
-    txt_writer.write("\n".join(records))
+    txt_writer.write("\n".join(orig_rows + records))
     txt_writer.close()
