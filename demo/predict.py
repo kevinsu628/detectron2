@@ -19,7 +19,7 @@ from detectron2.utils.visualizer import ColorMode
 
 import time
 import random
-import os
+import os, shutil
 import glob
 from detectron2.structures import BoxMode
 
@@ -47,46 +47,35 @@ def get_parser():
         help="extention of the image",
         default="jpg"
     )
+    parser.add_argument(
+        "--copy_old_labels",
+        help="if 1, will copy the old label files in dataset folder to output folder, and append\
+ newly generated labels to the old files. O.w., will create a new label. ",
+        type=int
+    )
+    parser.add_argument(
+        "--copy_imgs",
+        help="if 1, will copy the image into output folder",
+        type=int
+    )
+    parser.add_argument(
+        "--coco",
+        help="Is the weight a pretrained model from coco",
+        type=bool
+    )
     return parser
 
 
-# write a function that loads the dataset into detectron2's standard format
-def get_dicts(img_dir, args):
-    dataset_dicts = []
-    for each_txt in glob.glob(os.path.join(img_dir, "*.txt")):
-        record = {}
+def parsePrediction(outputs, coco=False):
+    # person bike car motor bus truck traffic light
+    interested_cls = [0,1,2,3,5,7,9]
 
-        filename = each_txt.replace(".txt", "."+args.ext)
-        height, width = cv2.imread(filename).shape[:2]
-
-        record["file_name"] = filename
-        record["height"] = height
-        record["width"] = width
-
-        objs = []
-        txt_reader = open(each_txt, "r")
-        for row in txt_reader:
-            row = row.strip("\n").split(" ")
-            cls_id = row[0]
-            x_c, y_c, w, h = [float(x) for x in row[1:]]
-            x_0, y_0 = (x_c - w / 2) * width, (y_c - h / 2) * height
-            x_1, y_1 = (x_c + w / 2) * width, (y_c + h / 2) * height
-            obj = {
-                "bbox": [x_0, y_0, x_1, y_1],
-                "bbox_mode": BoxMode.XYXY_ABS,
-                "category_id": int(cls_id)
-            }
-            objs.append(obj)
-        record["annotations"] = objs
-        dataset_dicts.append(record)
-    return dataset_dicts
-
-def parsePrediction(outputs):
     pred_classes = outputs["instances"].pred_classes.cpu().numpy()
     pred_boxes = outputs["instances"].pred_boxes.tensor.cpu().numpy()
     records = []
-    for each_cls, each_box in zip(pred_classes, pred_boxes):
-        cls_id = each_cls
+    for each_cls, each_box in zip(pred_classes, pred_boxes):    
+        cls_id = interested_cls.index(int(each_cls)) \
+                 if coco and int(each_cls) in interested_cls else each_cls
         [x1, y1, x2, y2] = each_box
         w, h = x2 - x1, y2 - y1
         (img_h, img_w) = outputs["instances"].image_size
@@ -110,29 +99,40 @@ cfg.SOLVER.IMS_PER_BATCH = 2
 cfg.SOLVER.BASE_LR = 0.00025
 cfg.SOLVER.MAX_ITER = 30000
 cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 64   # faster, and good enough for this toy dataset
-cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1
+cfg.MODEL.ROI_HEADS.NUM_CLASSES = 80
 cfg.OUTPUT_DIR = args.output
 os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7   # set the testing threshold for this model
+cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.6   # set the testing threshold for this model
 predictor = DefaultPredictor(cfg)
 
 
 if predict_whole_folder:
     for d in glob.glob(os.path.join(args.dataset, "*"+args.ext)):
         im = cv2.imread(d)
-        #start_time = time.time()
+        txt_name = os.path.basename(d).replace("."+args.ext, ".txt")
+        start_time = time.time()
         outputs = predictor(im)
-        #logger.info(
-        #    "{}: detected {} instances in {:.2f}s".format(
-        #        d, len(outputs["instances"]), time.time() - start_time
-        #    )
-        #)
-        records = parsePrediction(outputs)
-        jpg_path = os.path.join(args.output, os.path.basename(d))
-        cv2.imwrite(jpg_path, im)
-        txt_writer = open(jpg_path.replace("."+args.ext, ".txt"), "w+")
-        txt_writer.write("\n".join(records))
-        txt_writer.close()
+        logger.info(
+            "{}: detected {} instances in {:.2f}s".format(
+                d, len(outputs["instances"]), time.time() - start_time
+            )
+        )
+
+        records = parsePrediction(outputs, coco=args.coco)
+        if args.copy_imgs:
+            jpg_path = os.path.join(args.output, os.path.basename(d))
+            cv2.imwrite(jpg_path, im)
+        txt_path = os.path.join(args.dataset, txt_name)
+        new_txt_path = os.path.join(args.output, txt_name)
+        if args.copy_old_labels and os.path.exists(txt_path):
+            shutil.copyfile(txt_path, new_txt_path)
+            txt_writer = open(new_txt_path, "a+")
+            txt_writer.write("\n".join(records))
+            txt_writer.close()
+        else:
+            txt_writer = open(new_txt_path, "w+")
+            txt_writer.write("\n".join(records))
+            txt_writer.close()
 else:
     im = cv2.imread(args.dataset)
     outputs = predictor(im)
