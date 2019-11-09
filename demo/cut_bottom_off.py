@@ -2,38 +2,40 @@ import os
 import glob
 import cv2
 
-img = cv2.imread("/home/cambricon/Cambricon-MLU100/datasets_old/Tsinghua_traffic_sign/auto_label/ts_coco_cyc_adjusted_label/52020.jpg")
-lbl = open("/home/cambricon/Cambricon-MLU100/datasets_old/Tsinghua_traffic_sign/auto_label/ts_coco_cyc_adjusted_label/52020.txt", "r")
+parser = argparse.ArgumentParser(description="Cutting bottom part off an image")
+parser.add_argument("--dataset", help="A folder of original images")
+parser.add_argument("--output", help="A folder to store new images and labels")
+args = parser.parse_args()
 
-orig = lbl.read()
-lbl.close()
-width, height = img.shape[0], img.shape[1]
 cut_point = 9/10
-img = img[0:int(height*cut_point), 0:width]
 
-new = []
-for row in orig.split("\n"):
-    row = row.split(" ")
-    x_c, y_c, w, h = row[1:]
-    #y1_rel = float(y_c) - float(h)/2
-    #y2_rel = float(y_c) + float(h)/2
-    #if y1_rel > cut_point: #y1
-        # drop this bbox
-    #    print("Cut off") 
-    #    continue
-    #elif y2_rel > cut_point: #y2
-        # modify y2 to be cut_point
-    #    row[4] = str((float(row[4]) - (1 - cut_point))/cut_point)
-    row[2] = str(float(row[2]) / cut_point)
-    if float(row[2]) > 1:
-        continue
-    elif float(row[2]) + float(row[4])/2 > 1:
-        row[4] = str((1 - float(row[2])) * 2)
-    new.append(" ".join(row))
-print("\n".join(new))
+print("The following images contain bbox in the bottom {} part".format(str(1-cut_point)))
+for each_img in glob.glob(os.path.join(args.dataset, "*.jpg")):
+    each_txt = each_img.replace(".jpg", ".txt")
+    img = cv2.imread(each_img)
+    lbl = open(each_txt)
+
+    orig = lbl.read()
+    lbl.close()
+    width, height = img.shape[0], img.shape[1]
     
+    img = img[0:int(height*cut_point), 0:width]
 
-cv2.imwrite("./temp/ttest.jpg", img)
-new_lbl = open("./temp/ttest.txt", "w+")
-new_lbl.write("\n".join(new))
+    new = []
+    for row in orig.split("\n"):
+        row = row.split(" ")
+        row[2] = str(float(row[2]) / cut_point) # y_center
+        if float(row[2]) > 1:
+            print(each_img)
+            continue
+        elif float(row[2]) + float(row[4])/2 > 1:
+            row[4] = str((1 - float(row[2])) * 2) # h
+        new.append(" ".join(row))
+    print("\n".join(new))
+        
+
+    cv2.imwrite(os.path.join(args.output, os.path.basename(each_img)), img)
+    new_lbl = open(os.path.join(args.output, os.path.basename(each_txt)), "w+")
+    new_lbl.write("\n".join(new))
+
 
