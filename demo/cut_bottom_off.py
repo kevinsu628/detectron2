@@ -1,4 +1,4 @@
-import os
+import os, argparse
 import glob
 import cv2
 
@@ -31,8 +31,6 @@ for each_img in glob.glob(os.path.join(args.dataset, "*.jpg")):
         elif float(row[2]) + float(row[4])/2 > 1:
             row[4] = str((1 - float(row[2])) * 2) # h
         new.append(" ".join(row))
-    print("\n".join(new))
-        
 
     cv2.imwrite(os.path.join(args.output, os.path.basename(each_img)), img)
     new_lbl = open(os.path.join(args.output, os.path.basename(each_txt)), "w+")
