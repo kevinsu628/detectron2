@@ -115,8 +115,9 @@ if __name__ == "__main__":
         person = records["0"]
         vehicles = records["2"] + records["4"] + records["5"] # use all vehicles to solve cyclist conflict
         kept_cyclists, kept_person, kept_bikes = solveCyclistConflict(cyclists, bikes, person, vehicles)
-        kept_cars_ = solveOverlappingConflict(records["4"], records["2"], 0.9)
-        kept_cars = solveOverlappingConflict(records["5"], kept_cars_, 0.9)
+        kept_cars__ = solveOverlappingConflict(records["4"], records["2"], 0.9) # cars and bus overlapped
+        kept_cars_ = solveOverlappingConflict(records["5"], kept_cars__, 0.9) # car and truck overlapped
+        kept_cars = solveOverlappingConflict(records["3"], kept_cars_, 0.9) # car and motorcycle overlapped
 
         ###### Combine into new records ######
         # since we combined bike and motor. They both have cls_id 1. 
