@@ -81,7 +81,17 @@ def solveCyclistConflict(cyclists, bikes, person, vehicles):
     kept_bikes =  list(set(bikes) - set(removed_bikes))
     
     return kept_cyclists, kept_person, kept_bikes
-            
+
+# solve bbox overlapping conflicts between classA and classB
+# this function keeps the bbox of classA and drop classB if A and B overlaps > thres
+def solveOverlappingConflict(classA, classB, thres):
+    removed_classB = []
+    for bboxA in classA:
+        overlaped = getBboxWithIOUGreaterThan(bboxA, classB, 0.9)
+        removed_classB.append(overlaped)
+    kept_classB = list(set(classB) - set(removed_classB))
+    return kept_classB
+
 # a record is a list of tuple with yolo format bbox
 # (x_c, y_c, w, h)
 def recordsToRow(records, cls_id):
@@ -103,20 +113,23 @@ if __name__ == "__main__":
         cyclists = records["8"]
         bikes = records["1"] + records["3"]
         person = records["0"]
-        vehicles = records["2"] + records["4"] + records["5"]
+        vehicles = records["2"] + records["4"] + records["5"] # use all vehicles to solve cyclist conflict
         kept_cyclists, kept_person, kept_bikes = solveCyclistConflict(cyclists, bikes, person, vehicles)
+        kept_cars_ = solveOverlappingConflict(records["4"], records["2"], 0.9)
+        kept_cars = solveOverlappingConflict(records["5"], kept_cars_, 0.9)
 
         ###### Combine into new records ######
         # since we combined bike and motor. They both have cls_id 1. 
         # cyclist will have cls_id 3
         new_records = []
 
-        cyclists_related_ids = [3, 0, 1]
-        for bb, cls_id in zip([kept_cyclists, kept_person, kept_bikes], cyclists_related_ids):
+        # cyclists, pedestrian, bikes, cars 
+        modified_ids = [3, 0, 1, 2]
+        for bb, cls_id in zip([kept_cyclists, kept_person, kept_bikes, kept_cars], modified_ids):
             new_records += recordsToRow(bb, cls_id)
 
         for k in records.keys():
-            if int(k) not in cyclists_related_ids + [8]:
+            if int(k) not in modified_ids + [8]:
                 new_records += recordsToRow(records[k], k)
 
         jpg_path = each_txt.replace(".txt", ".jpg")
