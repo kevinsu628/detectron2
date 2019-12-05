@@ -87,8 +87,8 @@ def solveCyclistConflict(cyclists, bikes, person, vehicles):
 def solveOverlappingConflict(classA, classB, thres):
     removed_classB = []
     for bboxA in classA:
-        overlaped = getBboxWithIOUGreaterThan(bboxA, classB, 0.9)
-        removed_classB.append(overlaped)
+        overlaped = getBboxWithIOUGreaterThan(bboxA, classB, thres)
+        removed_classB += overlaped
     kept_classB = list(set(classB) - set(removed_classB))
     return kept_classB
 
@@ -115,9 +115,9 @@ if __name__ == "__main__":
         person = records["0"]
         vehicles = records["2"] + records["4"] + records["5"] # use all vehicles to solve cyclist conflict
         kept_cyclists, kept_person, kept_bikes = solveCyclistConflict(cyclists, bikes, person, vehicles)
-        kept_cars__ = solveOverlappingConflict(records["4"], records["2"], 0.9) # cars and bus overlapped
-        kept_cars_ = solveOverlappingConflict(records["5"], kept_cars__, 0.9) # car and truck overlapped
-        kept_cars = solveOverlappingConflict(records["3"], kept_cars_, 0.9) # car and motorcycle overlapped
+        kept_cars__ = solveOverlappingConflict(records["4"], records["2"], 0.8) # cars and bus overlapped
+        kept_cars_ = solveOverlappingConflict(records["5"], kept_cars__, 0.8) # car and truck overlapped
+        kept_cars = solveOverlappingConflict(records["3"], kept_cars_, 0.8) # car and motorcycle overlapped
 
         ###### Combine into new records ######
         # since we combined bike and motor. They both have cls_id 1. 

@@ -7,7 +7,7 @@ parser.add_argument("--dataset", help="A folder of original images")
 parser.add_argument("--output", help="A folder to store new images and labels")
 args = parser.parse_args()
 
-cut_point = 9/10
+cut_point = 7/8
 
 print("The following images contain bbox in the bottom {} part".format(str(1-cut_point)))
 for each_img in glob.glob(os.path.join(args.dataset, "*.jpg")):
@@ -17,13 +17,12 @@ for each_img in glob.glob(os.path.join(args.dataset, "*.jpg")):
 
     orig = lbl.read()
     lbl.close()
-    width, height = img.shape[0], img.shape[1]
-    
+    height, width = img.shape[0], img.shape[1]
     img = img[0:int(height*cut_point), 0:width]
-
     new = []
     for row in orig.split("\n"):
-        row = row.split(" ")
+        row = row.split(" ") 
+        if len(row) < 5: continue
         row[2] = str(float(row[2]) / cut_point) # y_center
         if float(row[2]) > 1:
             print(each_img)

@@ -59,23 +59,37 @@ def get_parser():
         type=int
     )
     parser.add_argument(
-        "--coco",
-        help="Is the weight a pretrained model from coco",
-        type=bool
+        "--mode",
+        help="The weight predicting coco cls or cyclist",
+        type=str
     )
     return parser
 
 
-def parsePrediction(outputs, coco=False):
+def parsePrediction(outputs, mode):
     # person bike car motor bus truck traffic light
-    interested_cls = [0,1,2,3,5,7,9]
-
+    #interested_cls = [0,1,2,3,5,7,9]
+    #interested_cls_map = [0,1,2,3,4,5,6]
+    interested_cls = [1,3,5,7,9]
+    interested_cls_map = [1,3,4,5,6]
+    cyclist_cls = 8
+    ts_cls = 7 
     pred_classes = outputs["instances"].pred_classes.cpu().numpy()
     pred_boxes = outputs["instances"].pred_boxes.tensor.cpu().numpy()
     records = []
     for each_cls, each_box in zip(pred_classes, pred_boxes):    
-        cls_id = interested_cls.index(int(each_cls)) \
-                 if coco and int(each_cls) in interested_cls else each_cls
+        cls_id = each_cls
+
+        if mode == "coco": 
+            if int(each_cls) in interested_cls:
+                cls_id = interested_cls_map[interested_cls.index(int(each_cls))]
+            else:
+                continue
+        elif mode == "cyclist":
+            cls_id = cyclist_cls
+        elif mode == "ts": 
+            cls_id = ts_cls    
+   
         [x1, y1, x2, y2] = each_box
         w, h = x2 - x1, y2 - y1
         (img_h, img_w) = outputs["instances"].image_size
@@ -99,10 +113,10 @@ cfg.SOLVER.IMS_PER_BATCH = 2
 cfg.SOLVER.BASE_LR = 0.00025
 cfg.SOLVER.MAX_ITER = 30000
 cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 64   # faster, and good enough for this toy dataset
-cfg.MODEL.ROI_HEADS.NUM_CLASSES = 80
+cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1#80
 cfg.OUTPUT_DIR = args.output
 os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.6   # set the testing threshold for this model
+cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.9  # set the testing threshold for this model
 predictor = DefaultPredictor(cfg)
 
 
@@ -118,16 +132,18 @@ if predict_whole_folder:
             )
         )
 
-        records = parsePrediction(outputs, coco=args.coco)
+        records = parsePrediction(outputs, mode=args.mode)
         if args.copy_imgs:
             jpg_path = os.path.join(args.output, os.path.basename(d))
             cv2.imwrite(jpg_path, im)
         txt_path = os.path.join(args.dataset, txt_name)
         new_txt_path = os.path.join(args.output, txt_name)
         if args.copy_old_labels and os.path.exists(txt_path):
-            shutil.copyfile(txt_path, new_txt_path)
-            txt_writer = open(new_txt_path, "a+")
-            txt_writer.write("\n".join(records))
+            old_txt_reader = open(txt_path, "r")
+            old_records = [r.strip("\n") for r in old_txt_reader]
+            old_txt_reader.close()
+            txt_writer = open(new_txt_path, "w+")
+            txt_writer.write("\n".join(old_records + records))
             txt_writer.close()
         else:
             txt_writer = open(new_txt_path, "w+")
